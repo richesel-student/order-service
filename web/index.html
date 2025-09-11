@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Order Lookup</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2rem; max-width: 700px; margin: auto; }
+    input { padding: .5rem; width: 60%; }
+    button { padding: .5rem 1rem; }
+    pre { background:#f7f7f7; padding:1rem; border-radius:6px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <h1>Order Lookup</h1>
+  <p>Enter order UID:</p>
+  <input id="uid" placeholder="b563feb7b2b84b6test"/>
+  <button id="btn">Get Order</button>
+  <h2>Result</h2>
+  <div id="result">—</div>
+
+  <script>
+    document.getElementById('btn').addEventListener('click', async () => {
+      const id = document.getElementById('uid').value.trim();
+      if (!id) return alert("Enter id");
+      const resEl = document.getElementById('result');
+      resEl.textContent = "Loading...";
+      try {
+        const r = await fetch(`/order/${encodeURIComponent(id)}`);
+        if (!r.ok) {
+          resEl.textContent = `Error: ${r.status} ${r.statusText}`;
+          return;
+        }
+        const data = await r.json();
+        resEl.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      } catch (e) {
+        resEl.textContent = "Network error: " + e.message;
+      }
+    });
+  </script>
+</body>
+</html>
