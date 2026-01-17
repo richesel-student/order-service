@@ -82,21 +82,38 @@ func (s *Store) LoadAllOrders(ctx context.Context, limit int) (map[string]models
 	if limit > 0 {
 		q = q + fmt.Sprintf(" LIMIT %d", limit)
 	}
+
 	rows, err := s.pool.Query(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		var raw json.RawMessage
 		if err := rows.Scan(&raw); err != nil {
-			continue
+			return nil, fmt.Errorf("LoadAllOrders scan: %w", err)
 		}
+
 		var o models.Order
 		if err := json.Unmarshal(raw, &o); err != nil {
+			// можно логировать и continue
 			continue
 		}
 		out[o.OrderUID] = o
 	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("LoadAllOrders rows: %w", err)
+	}
+
 	return out, nil
+}
+
+func (s *Store) SaveBadMessage(ctx context.Context, raw []byte, errText string) error {
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO bad_messages (raw_message, error)
+		VALUES ($1, $2)
+	`, string(raw), errText)
+	return err
 }

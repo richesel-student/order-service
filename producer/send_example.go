@@ -4,12 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math/rand"
 	"os"
+	"strconv"
 	"time"
+	"yourmodule/internal/models"
 
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/segmentio/kafka-go"
 )
 
+// envOr возвращает значение переменной окружения или дефолт
 func envOr(k, d string) string {
 	if v := os.Getenv(k); v != "" {
 		return v
@@ -17,9 +22,31 @@ func envOr(k, d string) string {
 	return d
 }
 
+// envFloat возвращает float из окружения или дефолт
+func envFloat(k string, d float64) float64 {
+	if v := os.Getenv(k); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f
+		}
+	}
+	return d
+}
+
+// envInt возвращает int из окружения или дефолт
+func envInt(k string, d int) int {
+	if v := os.Getenv(k); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return d
+}
+
 func main() {
-	broker := envOr("KAFKA_BROKERS", "kafka:9092")
+	broker := envOr("KAFKA_BROKERS", "localhost:9092")
 	topic := envOr("KAFKA_TOPIC", "orders")
+	count := envInt("COUNT", 10)
+	invalidRate := envFloat("INVALID_RATE", 0.2) // 20% сообщений будут "сломаны"
 
 	w := kafka.NewWriter(kafka.WriterConfig{
 		Brokers:  []string{broker},
@@ -28,45 +55,107 @@ func main() {
 	})
 	defer w.Close()
 
-	order := map[string]any{
-		"order_uid":    "b563feb7b2b84b6test",
-		"track_number": "WBILMTESTTRACK",
-		"entry":        "WBIL",
-		"delivery": map[string]any{
-			"name": "Test Testov", "phone": "+9720000000", "zip": "2639809",
-			"city": "Kiryat Mozkin", "address": "Ploshad Mira 15",
-			"region": "Kraiot", "email": "test@gmail.com",
+	gofakeit.Seed(time.Now().UnixNano())
+	rand.Seed(time.Now().UnixNano())
+
+	log.Printf("producer -> %s topic=%s count=%d invalid_rate=%.2f", broker, topic, count, invalidRate)
+
+	for i := 0; i < count; i++ {
+		uid := gofakeit.UUID()
+		makeInvalid := rand.Float64() < invalidRate
+		order := fakeOrder(uid, makeInvalid)
+
+		data, err := json.Marshal(order)
+		if err != nil {
+			log.Printf("marshal error: %v", err)
+			continue
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err = w.WriteMessages(ctx, kafka.Message{
+			Key:   []byte(uid),
+			Value: data,
+		})
+		cancel()
+
+		if err != nil {
+			log.Printf("failed send uid=%s: %v", uid, err)
+			continue
+		}
+
+		if makeInvalid {
+			log.Printf("sent INVALID: %s", uid)
+		} else {
+			log.Printf("sent: %s", uid)
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+func fakeOrder(uid string, makeInvalid bool) models.Order {
+	track := gofakeit.LetterN(10)
+	order := models.Order{
+		OrderUID:    uid,
+		TrackNumber: track,
+		Entry:       "WBIL",
+		Delivery: models.Delivery{
+			Name:    gofakeit.Name(),
+			Phone:   gofakeit.Phone(),
+			Zip:     gofakeit.Zip(),
+			City:    gofakeit.City(),
+			Address: gofakeit.Street(),
+			Region:  gofakeit.State(),
+			Email:   gofakeit.Email(),
 		},
-		"payment": map[string]any{
-			"transaction": "b563feb7b2b84b6test", "request_id": "", "currency": "USD",
-			"provider": "wbpay", "amount": 1817, "payment_dt": 1637907727, "bank": "alpha",
-			"delivery_cost": 1500, "goods_total": 317, "custom_fee": 0,
+		Payment: models.Payment{
+			Transaction:  uid,
+			Currency:     "USD",
+			Provider:     "wbpay",
+			Amount:       gofakeit.Number(100, 5000),
+			PaymentDT:    time.Now().Unix(),
+			Bank:         "alpha",
+			DeliveryCost: gofakeit.Number(50, 500),
+			GoodsTotal:   gofakeit.Number(50, 5000),
+			CustomFee:    0,
 		},
-		"items": []map[string]any{
-			{"chrt_id": 9934930, "track_number": "WBILMTESTTRACK", "price": 453,
-				"rid": "ab4219087a764ae0btest", "name": "Mascaras", "sale": 30,
-				"size": "0", "total_price": 317, "nm_id": 2389212, "brand": "Vivienne Sabo", "status": 202},
+		Items: []models.Item{
+			{
+				ChrtID:      gofakeit.Number(1, 999999),
+				TrackNumber: track,
+				Price:       gofakeit.Number(10, 1000),
+				RID:         gofakeit.UUID(),
+				Name:        gofakeit.Word(),
+				Sale:        gofakeit.Number(0, 50),
+				Size:        "0",
+				TotalPrice:  gofakeit.Number(10, 1000),
+				NmID:        gofakeit.Number(1, 999999),
+				Brand:       gofakeit.Company(),
+				Status:      200,
+			},
 		},
-		"locale": "en", "internal_signature": "", "customer_id": "test",
-		"delivery_service": "meest", "shardkey": "9", "sm_id": 99,
-		"date_created": "2021-11-26T06:22:19Z", "oof_shard": "1",
+		Locale:          "en",
+		CustomerID:      gofakeit.Username(),
+		DeliveryService: "meest",
+		ShardKey:        "1",
+		SmID:            1,
+		DateCreated:     time.Now().UTC().Format(time.RFC3339),
+		OofShard:        "1",
 	}
 
-	data, err := json.Marshal(order)
-	if err != nil {
-		log.Fatal(err)
+	if makeInvalid {
+		// ломаем данные для теста валидатора
+		switch gofakeit.Number(1, 4) {
+		case 1:
+			order.Payment.Currency = "RUB" // неправильная валюта
+		case 2:
+			order.Payment.Amount = -10 // отрицательная сумма
+		case 3:
+			order.Items = []models.Item{} // пустые items
+		default:
+			order.OrderUID = "" // пустой order_uid
+		}
 	}
 
-	time.Sleep(2 * time.Second)
-	log.Printf("producer -> %s topic=%s", broker, topic)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := w.WriteMessages(ctx, kafka.Message{
-		Key:   []byte(order["order_uid"].(string)),
-		Value: data,
-	}); err != nil {
-		log.Fatalf("failed write: %v", err)
-	}
-	log.Println("sent:", order["order_uid"])
+	return order
 }

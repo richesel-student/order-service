@@ -1,28 +1,41 @@
 package api
 
 import (
-	// "context"
+	"context"
 	"encoding/json"
 	"net/http"
+	"time"
+
+	"yourmodule/internal/models"
 
 	"github.com/gorilla/mux"
-	"yourmodule/internal/cache"
-	"yourmodule/internal/db"
 )
 
-type Server struct {
-	store *db.Store
-	cache *cache.Cache
+/************* INTERFACES *************/
+
+type Store interface {
+	GetOrder(ctx context.Context, id string) (models.Order, []byte, error)
 }
 
-func NewServer(store *db.Store, cache *cache.Cache) *Server {
+type Cache interface {
+	Get(key string) (interface{}, bool)
+	Set(key string, val interface{}, ttl time.Duration)
+}
+
+/************* SERVER *************/
+
+type Server struct {
+	store Store
+	cache Cache
+}
+
+func NewServer(store Store, cache Cache) *Server {
 	return &Server{store: store, cache: cache}
 }
 
 func (s *Server) Routes() http.Handler {
 	r := mux.NewRouter()
-	r.HandleFunc("/order/{order_uid}", s.GetOrder).Methods("GET")
-
+	r.HandleFunc("/order/{order_uid}", s.GetOrder).Methods(http.MethodGet)
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./web")))
 	return r
 }
@@ -35,22 +48,24 @@ func (s *Server) GetOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1) try cache
-	if ord, ok := s.cache.Get(id); ok {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ord)
-		return
+	// 1) cache
+	if v, ok := s.cache.Get(id); ok {
+		if ord, ok := v.(models.Order); ok {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(ord)
+			return
+		}
 	}
 
-	// 2) fallback to DB
-	ctx := r.Context()
-	ord, _, err := s.store.GetOrder(ctx, id)
+	// 2) db
+	ord, _, err := s.store.GetOrder(r.Context(), id)
 	if err != nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	// put into cache for future
-	s.cache.Set(id, ord)
+
+	s.cache.Set(id, ord, time.Minute)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ord)
+	_ = json.NewEncoder(w).Encode(ord)
 }

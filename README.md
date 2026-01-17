@@ -23,39 +23,58 @@
    git clone https://github.com/richesel-student/order-service.git
    cd order-service
    ```
-
-2. Собрать и поднять сервисы:
-    ```bash
-   docker compose down -v --remove-orphans
-   docker compose up -d --build
-   ```
-
-3. Проверить список контейнеров: 
+2. Поднимаем все сервисы:   
    ```bash
-    docker compose ps
+   make dc-up
     ```
-
-4. Проверить логи приложения:
+3. Просмотр логов приложения: 
+   ```bash
+   make dc-log
+    ```
+4. Запуск всех Go тестов:
     ```bash
-    docker logs order-service-app --tail=100
+    make test
     ```
+5. Тестирование Kafka:
+    ```bash
+    make test-kafka
+    ```
+## Быстрая проверка работы
 
-# Запуск
+1. Отправка тестовых сообщений в Kafka:
 ```bash
-    docker compose run --rm producer
+make dc-producer-up
 ```
-# Проверка
 
-2. Проверка данных в PostgreSQL
+2. Получение заказа через HTTP API:
 ```bash
-    docker exec -it order-service-postgres \
-    psql -U postgres -d orderservice -c "SELECT order_uid FROM orders LIMIT 5;"
+curl http://localhost:8082/order/{order_uid}
 ```
-3. Получение заказа через API
-```bash
-    curl http://localhost:8082/order/b563feb7b2b84b6test
-```
-4. Веб-интерфейс
+
+3. Веб-интерфейс сервиса:
 ```bash
 http://localhost:8082
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
