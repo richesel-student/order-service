@@ -13,7 +13,34 @@ import (
 
 type fakeStore struct {
 	data map[string]models.Order
+	BadMessageRaw  []byte
+	BadMessageErr  string
+	BadMessageSaved bool
 }
+
+func newFakeStoreWithSpy() *fakeStore {
+	return &fakeStore{
+		data: make(map[string]models.Order),
+	}
+}
+
+func (f *fakeStore) SaveBadMessage(ctx context.Context, raw []byte, errText string) error {
+	f.BadMessageRaw = raw
+	f.BadMessageErr = errText
+	f.BadMessageSaved = true
+	return nil
+}
+
+func (f *fakeStore) GetOrder(ctx context.Context, orderUID string) (models.Order, []byte, error) {
+	o, ok := f.data[orderUID]
+	if !ok {
+		return models.Order{}, nil, errors.New("not found")
+	}
+	raw, _ := json.Marshal(o)
+	return o, raw, nil
+}
+
+
 
 func newFakeStore() *fakeStore {
 	return &fakeStore{data: map[string]models.Order{}}
@@ -27,14 +54,6 @@ func (f *fakeStore) SaveOrder(ctx context.Context, ord models.Order, raw []byte)
 	return nil
 }
 
-func (f *fakeStore) GetOrder(ctx context.Context, orderUID string) (models.Order, []byte, error) {
-	o, ok := f.data[orderUID]
-	if !ok {
-		return models.Order{}, nil, errors.New("not found")
-	}
-	raw, _ := json.Marshal(o)
-	return o, raw, nil
-}
 
 func (f *fakeStore) LoadAllOrders(ctx context.Context, limit int) (map[string]models.Order, error) {
 	out := make(map[string]models.Order)
@@ -44,9 +63,6 @@ func (f *fakeStore) LoadAllOrders(ctx context.Context, limit int) (map[string]mo
 	return out, nil
 }
 
-func (f *fakeStore) SaveBadMessage(ctx context.Context, raw []byte, errText string) error {
-	return nil
-}
 
 /************* TESTS *************/
 
@@ -115,5 +131,27 @@ func TestStore_SaveBadMessage(t *testing.T) {
 	err := store.SaveBadMessage(ctx, []byte("bad"), "error")
 	if err != nil {
 		t.Fatalf("SaveBadMessage failed: %v", err)
+	}
+}
+func TestStore_SaveBadMessageCalled(t *testing.T) {
+	store := newFakeStoreWithSpy()
+	ctx := context.Background()
+
+	raw := []byte(`{"order_uid":""}`) // невалидный JSON
+	err := store.SaveBadMessage(ctx, raw, "validation failed")
+	if err != nil {
+		t.Fatalf("SaveBadMessage failed: %v", err)
+	}
+
+	if !store.BadMessageSaved {
+		t.Fatalf("expected bad message to be saved")
+	}
+
+	if string(store.BadMessageRaw) != string(raw) {
+		t.Fatalf("raw message mismatch")
+	}
+
+	if store.BadMessageErr != "validation failed" {
+		t.Fatalf("error text mismatch")
 	}
 }
