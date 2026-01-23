@@ -14,7 +14,9 @@ import (
 
 // Message обёртка Kafka-сообщения
 type Message struct {
-	Value []byte
+	Value     []byte
+	Partition int
+	Offset    int64
 }
 
 // OrderStore интерфейс для работы с БД
@@ -71,7 +73,12 @@ func (c *Consumer) Run(ctx context.Context) {
 		}
 
 		if err := ord.Validate(); err != nil {
-			log.Printf("invalid data: %v", err)
+
+			log.Printf(
+				"invalid order uid=%s err=%v",
+				ord.OrderUID,
+				err,
+			)
 			_ = c.store.SaveBadMessage(ctx, m.Value, "validation: "+err.Error())
 			_ = c.reader.CommitMessages(ctx, m)
 			continue
@@ -104,14 +111,27 @@ func (k *KafkaReaderWrapper) FetchMessage(ctx context.Context) (Message, error) 
 	if err != nil {
 		return Message{}, err
 	}
-	return Message{Value: m.Value}, nil
+	return Message{
+		Value:     m.Value,
+		Partition: m.Partition,
+		Offset:    m.Offset,
+	}, nil
+
+	// return Message{Value: m.Value}, nil
+
 }
 
 // CommitMessages подтверждает обработанные сообщения
 func (k *KafkaReaderWrapper) CommitMessages(ctx context.Context, msgs ...Message) error {
 	km := make([]kafka.Message, len(msgs))
 	for i, m := range msgs {
-		km[i] = kafka.Message{Value: m.Value}
+		km[i] = kafka.Message{
+			Value:     m.Value,
+			Partition: m.Partition,
+			Offset:    m.Offset,
+		}
+
+		// km[i] = kafka.Message{Value: m.Value}
 	}
 	return k.R.CommitMessages(ctx, km...)
 }

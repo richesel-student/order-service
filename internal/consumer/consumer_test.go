@@ -62,22 +62,6 @@ func (f *fakeReader) Close() error { return nil }
 func TestConsumerRun(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	// validOrder := models.Order{
-	// 	OrderUID:        "123",
-	// 	TrackNumber:     "TN123",
-	// 	Entry:           "entry",
-	// 	Delivery:        models.Delivery{Name: "name", Phone: "1234567", Zip: "12345", City: "City", Address: "addr", Region: "reg", Email: "email@example.com"},
-	// 	Payment:         models.Payment{Transaction: "tr", Currency: "USD", Provider: "prov", Amount: 100, PaymentDT: 1234567890, Bank: "bank"},
-	// 	Items:           []models.Item{{ChrtID: 1, Price: 100, Name: "item"}},
-	// 	Locale:          "en",
-	// 	CustomerID:      "cust123",
-	// 	DeliveryService: "dService",
-	// 	ShardKey:        "shard",
-	// 	DateCreated:     "2026-01-16T15:58:00Z",
-	// 	OofShard:        "oof",
-	// }
-
 	validOrder := models.Order{
 		OrderUID:    "123",
 		TrackNumber: "TN12345",

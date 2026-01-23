@@ -12,9 +12,9 @@ import (
 /************* FAKE STORE / MOCK *************/
 
 type fakeStore struct {
-	data map[string]models.Order
-	BadMessageRaw  []byte
-	BadMessageErr  string
+	data            map[string]models.Order
+	BadMessageRaw   []byte
+	BadMessageErr   string
 	BadMessageSaved bool
 }
 
@@ -40,8 +40,6 @@ func (f *fakeStore) GetOrder(ctx context.Context, orderUID string) (models.Order
 	return o, raw, nil
 }
 
-
-
 func newFakeStore() *fakeStore {
 	return &fakeStore{data: map[string]models.Order{}}
 }
@@ -54,7 +52,6 @@ func (f *fakeStore) SaveOrder(ctx context.Context, ord models.Order, raw []byte)
 	return nil
 }
 
-
 func (f *fakeStore) LoadAllOrders(ctx context.Context, limit int) (map[string]models.Order, error) {
 	out := make(map[string]models.Order)
 	for k, v := range f.data {
@@ -62,7 +59,6 @@ func (f *fakeStore) LoadAllOrders(ctx context.Context, limit int) (map[string]mo
 	}
 	return out, nil
 }
-
 
 /************* TESTS *************/
 

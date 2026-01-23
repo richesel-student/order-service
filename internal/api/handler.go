@@ -27,7 +27,6 @@ type Cache interface {
 type Server struct {
 	store Store
 	cache Cache
-	
 }
 
 func NewServer(store Store, cache Cache) *Server {
@@ -50,19 +49,19 @@ func (s *Server) GetOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if v, ok := s.cache.Get(id); ok {
-	if ord, ok := v.(models.Order); ok {
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(ord); err != nil {
-			// обработка ошибки: отправляем 500 и логируем
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+		if ord, ok := v.(models.Order); ok {
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(ord); err != nil {
+				// обработка ошибки: отправляем 500 и логируем
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+				return
+			}
 			return
 		}
-		return
 	}
-}
 
 	// 2) db
-	ord, _, err := s.store.GetOrder(r.Context(), id) 
+	ord, _, err := s.store.GetOrder(r.Context(), id)
 	if err != nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
@@ -75,7 +74,5 @@ func (s *Server) GetOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	
-
 
 }
