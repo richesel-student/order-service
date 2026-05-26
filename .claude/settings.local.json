@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gofmt *)",
+      "Bash(go test *)",
+      "Bash(curl *)",
+      "Bash(docker compose down *)",
+      "Bash(docker compose up *)"
+    ]
+  }
+}

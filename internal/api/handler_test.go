@@ -97,3 +97,41 @@ func TestGetOrder_NotFound(t *testing.T) {
 		t.Fatalf("expected 404, got %d", w.Code)
 	}
 }
+
+/************* BENCHMARKS *************/
+
+func BenchmarkGetOrderHandler(b *testing.B) {
+	server := NewServer(&fakeStore{}, newFakeCache())
+
+	for i := 0; i < b.N; i++ {
+		// Создаем новый recorder для каждой итерации
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/order/123", nil)
+
+		// Вызываем реальный handler
+		server.Routes().ServeHTTP(w, req)
+
+		// Проверяем, что запрос обработался корректно
+		if w.Code != http.StatusOK {
+			b.Fatalf("expected 200, got %d", w.Code)
+		}
+	}
+}
+
+func BenchmarkGetOrderHandler_Miss(b *testing.B) {
+	server := NewServer(&fakeStore{}, newFakeCache())
+
+	for i := 0; i < b.N; i++ {
+		// Создаем новый recorder для каждой итерации
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/order/999", nil)
+
+		// Вызываем реальный handler
+		server.Routes().ServeHTTP(w, req)
+
+		// Проверяем, что запрос обработался корректно
+		if w.Code != http.StatusNotFound {
+			b.Fatalf("expected 404, got %d", w.Code)
+		}
+	}
+}

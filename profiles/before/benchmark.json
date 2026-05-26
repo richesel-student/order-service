@@ -1,0 +1,10 @@
+{"ImportPath":"yourmodule/internal/api [yourmodule/internal/api.test]","Action":"build-output","Output":"# yourmodule/internal/api [yourmodule/internal/api.test]\n"}
+{"ImportPath":"yourmodule/internal/api [yourmodule/internal/api.test]","Action":"build-output","Output":"internal/api/handler.go:4:2: \"bytes\" imported and not used\n"}
+{"ImportPath":"yourmodule/internal/api [yourmodule/internal/api.test]","Action":"build-output","Output":"internal/api/handler.go:7:2: \"fmt\" imported and not used\n"}
+{"ImportPath":"yourmodule/internal/api [yourmodule/internal/api.test]","Action":"build-output","Output":"internal/api/handler.go:9:2: \"reflect\" imported and not used\n"}
+{"ImportPath":"yourmodule/internal/api [yourmodule/internal/api.test]","Action":"build-output","Output":"internal/api/handler.go:10:2: \"strings\" imported and not used\n"}
+{"ImportPath":"yourmodule/internal/api [yourmodule/internal/api.test]","Action":"build-output","Output":"internal/api/handler.go:11:2: \"sync\" imported and not used\n"}
+{"ImportPath":"yourmodule/internal/api [yourmodule/internal/api.test]","Action":"build-fail"}
+{"Time":"2026-05-26T21:58:59.349926+03:00","Action":"start","Package":"yourmodule/internal/api"}
+{"Time":"2026-05-26T21:58:59.349999+03:00","Action":"output","Package":"yourmodule/internal/api","Output":"FAIL\tyourmodule/internal/api [build failed]\n"}
+{"Time":"2026-05-26T21:58:59.350015+03:00","Action":"fail","Package":"yourmodule/internal/api","Elapsed":0,"FailedBuild":"yourmodule/internal/api [yourmodule/internal/api.test]"}

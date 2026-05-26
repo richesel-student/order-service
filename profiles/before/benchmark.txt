@@ -1,0 +1,8 @@
+goos: darwin
+goarch: arm64
+pkg: yourmodule/internal/api
+cpu: Apple M1 Pro
+BenchmarkGetOrderHandler-8        	     620	   1906559 ns/op	 1243546 B/op	  100565 allocs/op
+BenchmarkGetOrderHandler_Miss-8   	     664	   1862232 ns/op	 1241440 B/op	  100562 allocs/op
+PASS
+ok  	yourmodule/internal/api	3.591s
